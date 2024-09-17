@@ -9,6 +9,10 @@ import sys
 def match_pattern(input_line, pattern):
     if len(pattern) == 1:
         return pattern in input_line
+    elif pattern == "\\d":
+        for char in input_line:
+            if char.isnumeric():
+                return True                
     else:
         raise RuntimeError(f"Unhandled pattern: {pattern}")
 
@@ -26,7 +30,7 @@ def main():
 
     # Uncomment this block to pass the first stage
     if match_pattern(input_line, pattern):
-        print("Pattern matched!")
+        print(input_line)
         exit(0)
     else:
         exit(1)
