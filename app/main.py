@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import sys
 
 # import pyparsing - available if you need it!
@@ -24,6 +26,7 @@ def main():
 
     # Uncomment this block to pass the first stage
     if match_pattern(input_line, pattern):
+        print("Pattern matched!")
         exit(0)
     else:
         exit(1)
