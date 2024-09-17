@@ -13,6 +13,8 @@ def match_pattern(input_line, pattern):
         return numeric_pattern(input_line, pattern)
     elif pattern == "\\w":
         return alphanumeric_pattern(input_line)
+    elif pattern[0] == "[" and pattern[1] == "^" and pattern[-1] == "]":
+        return negative_group_pattern(input_line, pattern)
     elif pattern[0] == "[" and pattern[-1] == "]": #is this a bad place for input validation?
         return positive_group_pattern(input_line, pattern)
     else:
@@ -61,10 +63,16 @@ def positive_group_pattern(input_line, pattern):
     '''Returns true if input_line contains any characters from pattern
     '''
 
-    pattern_set = set(pattern[1:-2])
+    pattern_set = set(pattern[1:-1])
     input_set = set(input_line)
 
     return not (pattern_set.isdisjoint(input_set))
+
+def negative_group_pattern(input_line, pattern):
+    pattern_set = set(pattern[2:-1])
+    input_set = set(input_line)
+
+    return pattern_set.isdisjoint(input_set)
 
 if __name__ == "__main__":
     main()
