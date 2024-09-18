@@ -104,6 +104,14 @@ Ways to handle backwards movement:
 def matchhere(s, p):
     if len(p) == 0:
         return True
+    elif len(p) > 1 and p[1] == "+": #first check prevents out of bounds
+        if s[0] == p[0]:
+            s_i = 1
+            while s_i < len(s) and s[s_i] == p[0]:
+                s_i += 1
+            return matchhere(s[s_i:], p[2:])
+        else:
+            return False
     elif p[0] == "[":
         group_end = p.find("]")#I should have a way to throw an error if it isn't found.
         if p[1] == "^":
@@ -127,7 +135,7 @@ def matchhere(s, p):
             return True
         else:
             return False 
-            #Is this correct thinking?
+    
     elif len(s) == 0:
         '''Running out of pattern characters before the input is over
         is fine. Running out of input before the pattern is over is not
@@ -149,8 +157,9 @@ def main():
         exit(1)
     
     '''
-    s = "log"
-    pattern = "^log"'''
+    s = "caaats"
+    pattern = "ca+t"'''
+    
     print("Logs from your program will appear here!")
 
     # Uncomment this block to pass the first stage
