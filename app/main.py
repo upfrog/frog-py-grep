@@ -112,6 +112,47 @@ def matchhere(s, p):
             return matchhere(s[s_i:], p[2:])
         else:
             return False
+
+
+    #NOT WORKING - debug and see whats up!
+    elif len(p) > 1 and p[1] == "?":
+        if len(s) == 0:
+            return matchhere(s, p[2:]) #In case p still has more conditions
+        elif s[0] == p[0]:
+                return matchhere(s[1:], p[2:])
+        
+                '''
+                For if I do need to avoid repeated characters
+                if len(s) > 0 and s[1] == p[0]: #I don't know if this is a case I care about or not... must it match no more than one time?
+                return False
+                else:
+                '''
+        else:
+            return matchhere(s, p[2:])
+            
+
+        '''
+        What are the possible conditions here?
+        1) There are zero instances of the character
+        2) there is one isntance of the character
+        3) there is more than one instance of the character
+        4) There are no more characters at all
+        
+        '''
+
+        '''
+        if len(s) == 1 and s[0] == p[0]:
+            return True
+        if len(s) > 1 and s[1] != p[0]:
+            s_increment = 0
+            if s[0] == [0]:
+                s_increment = 1
+            
+            return matchhere(s[s_increment:], p[2:])
+        else:
+            return False'''
+
+
     elif p[0] == "[":
         group_end = p.find("]")#I should have a way to throw an error if it isn't found.
         if p[1] == "^":
@@ -135,6 +176,8 @@ def matchhere(s, p):
             return True
         else:
             return False 
+   
+
     
     elif len(s) == 0:
         '''Running out of pattern characters before the input is over
@@ -157,9 +200,9 @@ def main():
         exit(1)
     
     '''
-    s = "caaats"
-    pattern = "ca+t"'''
-    
+    s = "dogs"
+    pattern = "dogs?"'''
+
     print("Logs from your program will appear here!")
 
     # Uncomment this block to pass the first stage
