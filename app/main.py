@@ -62,6 +62,13 @@ def matchhere(s, p):
         is fine. Running out of input before the pattern is over is not
         '''
         return False
+    elif p[0] == ".":
+        '''So long as there is some character here, it's fine. Because
+        this is after the check for remaining characters, it is
+        guaranteed to pass.
+        '''
+        return matchhere(s[1:], p[1:]) 
+    
     elif s[0] == p[0]:
         return matchhere(s[1:], p[1:])
     else:
