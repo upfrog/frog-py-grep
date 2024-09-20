@@ -56,7 +56,41 @@ def matchhere(s, p):
         if len(s) == 0:
             return True
         else:
-            return False 
+            return False
+    elif p[0] == "(":
+        '''This needs to be cleaned up a bit. In particular:
+            - I am not convinced I actually need the try-except clauses,
+            since the indices are already guaranteed to be in p
+            - Somewhere along the way, I think I lost the "improperly
+            formed input" exception code. I should put that back in, 
+            and develop a consistent way of integrating input validation
+            with the rest of the code.
+            - This code is just.... Ugly. It's ugly and unclear.
+            - Try to expand this to handle arbitrary numbers of groups.
+        '''
+        group_end = p.find(")")
+        divider = p.find("|")
+        if divider == -1 or group_end == -1: 
+            exit(1)
+
+        try:
+            e1 = p[1:divider]
+        except:
+            return False
+
+        if s[0:len(e1)] == e1:
+            return matchhere(s[len(e1):], p[group_end+1:])
+        
+        try:
+            e2 = p[divider+1:group_end]
+        except:
+            return False
+        
+        if s[0:len(e2)] == e2:
+            return matchhere(s[len(e2):], p[group_end+1:])
+        
+        return False
+        
     elif len(s) == 0:
         '''Running out of pattern characters before the input is over
         is fine. Running out of input before the pattern is over is not
@@ -84,9 +118,9 @@ def main():
         print("Expected first argument to be '-E'")
         exit(1)
     
-    '''
-    s = "dogs"
-    pattern = "dogs?"'''
+    '''  
+    s = "cat"
+    pattern = ("(bat|caf)")'''
 
     print("Logs from your program will appear here!")
 
