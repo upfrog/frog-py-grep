@@ -7,6 +7,7 @@ import sys
 
 def match(s, p):
     
+    
     if p[0] == "^":
         return matchhere(s, 0, p, 1)
     for i, c in enumerate(s):
@@ -17,12 +18,26 @@ def match(s, p):
 
     return False
 
+'''
+TODO:
+- capture groups cannot be modified by eg + or ?. Fix this. 
+- There's a decent chance you'll have to rewrite your regular groups to take those modifiers as
+well, so don't get too excited yet.
 
+
+'''
 def matchhere(s, si, p, pi):
     '''si is the current index in s, and pi is the current index in p
     '''
+
+    global groups #THIS SEEMS REALLY BAD
     p_remainder = len(p) - (pi)
     s_remainder = len(s) - (si)
+    try:
+        p_val = p[pi]
+        s_val = s[si]
+    except:
+        pass
     if p_remainder == 0:
         return True
     elif p_remainder > 1 and p[pi+1] == "+": #first check prevents out of bounds
@@ -33,7 +48,7 @@ def matchhere(s, si, p, pi):
                 matches += 1
             return matchhere(s, si+matches, p, pi + 2)
         else:
-            return False
+            return check_exit(s, si, p, pi)
     elif p_remainder > 1 and p[pi + 1] == "?":
         if s_remainder == 0:
             return matchhere(s, si, p, pi + 2) #In case p still has more conditions
@@ -49,41 +64,123 @@ def matchhere(s, si, p, pi):
         elif s[si] in p[pi+1:group_end]:
             return matchhere(s, si+1, p, pi+group_end+1)
         else:
-            return False
+            return check_exit(s, si, p, pi)
     elif p[pi] == "\\":
-        if p[pi+1] == "d":
+        k = p[pi+1]
+        if k == "d":
             if s[si].isnumeric() is True:
                 return matchhere(s, si+1,p, pi+2)
             else:
-                return False
-        elif p[pi+1] == "w":
+                return check_exit(s, si, p, pi+1)
+        elif k == "w":
             if (s[si].isnumeric() or s[si].isalpha() or s[si] == "_"):
                 return matchhere(s, si+1, p, pi+2)
+        elif int(k) <= len(groups):
+            k = int(k) - 1
+            #Check a backreference
+            begin = groups[k][0]
+            end = groups[k][1]
+            back_reference = s[begin : end]
+            if s[si: si+(end-begin)] == back_reference:
+                #it's true! We can move on
+                return matchhere(s, si + (end-begin) + 1, p, pi+2)
+        else:
+            return check_exit(s, si, p, pi + 1)
     elif p[pi] == "$":
         if s_remainder == 0:
             return True
         else:
-            return False
-    elif p[0] == "(": #We have a group. Lets see what type it is.
+            return check_exit(s, si, p, pi + 1)
+    elif p[pi] == "(":
+        groups.append([si])   
+        choices = get_choices(p, pi+1)
 
-        elems = []
-        prev_devider = 0
+        for elem in choices:
+            if matchhere(s, si, p, elem):
+                return True
 
-        for i, c in enumerate(p):
+        return False
+
+
+
+        return matchhere(s, si, p, pi+1)
+        '''
+        Okay, how about this. match_( still generates a list of options, like it used to. But this
+        time it still defaults to forward matching. that is, it tries to match the first, and if
+        it succeeds, then the first one just keeps on going. It hits a |, and things continue
+        in the current fashion, as if I made no changes. BUT, if it fails to match, then it 
+        returns false, and we go back to the group, which will try again with the next option
+        starting point.
+    
+        ''' 
+    elif p[pi] == ")":
+        i = len(groups) - 1
+
+        while i >= 0 and len(groups[i]) != 1:
+            i -= 1
+
+        groups[i].append(si-1) #presumably the previous index was the last of the group
+        #buuuuuuuuuut also we'll be using this in a string slice, so we want one above
+
+        return matchhere(s, si, p, pi+1)
+    elif p[pi] == "|":
+        #If I'm here, then I know that the not-last term of choice group was true
+        '''
+        It doesn't matter how many additional optional terms there are, and how many groups
+        deep they go. to be here, we must have matched the previous option, so we can
+        ignore the future options. Therefor, we want to go straight to the end of the group        
+        '''
+        i = find_group_end(p, pi)
+        return matchhere(s, si, p, i) #go to it, not past it; we want to document the group end
+        
+
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        '''
+        choices = []
+        prev_divider = pi
+
+        for i, c in enumerate(p[pi:]):
             if c == "|":
-                elems.append(p[prev_devider+1:i])
+                choices.append(p[prev_divider+1:i)
                 prev_devider = i
 
-        elems.append(p[prev_devider+1:-1])
+        choices.append(p[prev_devider+1:-1])
 
         #Asking for forgiveness, not permission
-        for elem in elems:
+        #This checks an entire possibility at a time
+        for elem in choices:
             try:
-                if elem == s[0:len(elem)]:
+                if elem == s[si:len(elem)]:
                     return matchhere(s[len(elem)+1 : ], p[p.index(")")+1 : ])
             except: pass
 
         return False
+        '''
 
 
 
@@ -106,18 +203,80 @@ def matchhere(s, si, p, pi):
 
 
 
+        '''
+        We find a paren. What do we do?
+
+        First we check the next char. If it's a paren, go to 1
+
+        If it isn't a paren, we start matching, character by character. If we get a false,
+        then we want to see if this group has an | in it.
+
+        Lets... Lets try what we have now.
+        '''
 
 
+        #Once more, let's try this again.
+
+        #we have a group. 
+
+
+
+
+        '''
+        We have the start index for the group. Add it to the grouplist
+
+        if matchnext == False
+            if group contains | before ) or (
+            return matchnext(|+1)
+        if contains | and matchnext == false
+            return False
+
+        
+        match again, starting at |+1
+
+        else return false
+        
+
+
+        no, we need a while loop?
+
+
+
+        implement a has_option function. Whenever I'm about to generate a false, instead
+        check has_option. If it's true, then instead of returning false, match at |+1
+
+        Do this check at the matchhere level
+
+        When we see an open paren, append the current start index to the end of the grouplist,
+        and then match with the next index
+        when we see a close paren, append the current index to the first element in the 
+        grouplist that only has one element
+
+
+
+        '''
+
+
+
+
+
+
+
+
+        
 
 
         #First we parse the top level of the group.
         #This is necesarry for... Reasons THAT I SHOULD CLARIFY AND SPECIFY
         #For one thing, a simple group (is that a good term?) should return false when it stops matching, but an optional one shouldn't... That's bad and dumb.
 
-        elems = []
-        prev_divider = 0
+        choices = []
+        prev_divider = pi
         paren_stack = []
-        i = 0
+        i = pi
+        
+        grouplist_index  = len(groups)
+        groups.append("")
 
 
         for i, char in enumerate(p):
@@ -131,27 +290,150 @@ def matchhere(s, si, p, pi):
             if char == "(":
                 paren_stack.append(char)
             elif char == ")" and len(paren_stack) == 1 and paren_stack[0] == "(":
-                elems.append(p[prev_divider+1 : i])
+                choices.append(p[prev_divider+1 : i])
                 break #We have reached the end of the group level
             elif char == ")" and paren_stack[-1] == "(" :
                 paren_stack.pop()
             elif char == "|" and len(paren_stack) == 1:
-                elems.append(p[prev_divider+1 : i])
+                choices.append(p[prev_divider+1 : i])
                 prev_divider = i
             
-        for e in elems:
-            if matchhere(s, e) == True: #match inwards
+        for e in choices:
+            if matchhere(s, si, e, 0) == True: #match inwards
+
+                groups[grouplist_index].append(s)
                 #add to grouplist
                 #then match outwards
                 #Or do we just return true after adding to the list?
 
 
-
                 #use the group list to check where the end of the currently parsed content is!
-                return matchhere(s, p[i+1 : ])
+                '''
+                In this case, we are still passing down slices. This means that the recursion
+                will naturally terminate at the end of the slice, meaning we can keep
+                this structure; eventually, the recursion will ascend back to the point
+                that there is something after the group, and it will continue as normal.
+                '''
+                return matchhere(s, si + len(e), p, i+1)
                 
             else:
-                return False
+                pass
+                
+        return False
+    
+
+        '''
+        Do I need to save groups? If I have a backreference, I just go to the nth
+        parenthesis in the pattern, and run it against the next chunk of text.
+
+        But once again, how do I know where to continue? Yes, I've already run the group,
+        but I can't figure out where it starts and ends at the same time there either
+
+        Enter a group. Commit it's first index to the grouplist.
+
+        In then enters another group. Commit it's first index to the grouplist. 
+
+        This group terminates...sdkfjasdklfjasdkl;jf
+
+        Alternative: don't splice out the close paren of a group. Add a match for ")". When
+        you see it, find the most recent group... No, most recent won't do..
+
+        
+        grouplist is now a 2d array. Or an array of tuples, whatever. It contains 2 values;
+        the start index for a group, and the end index.
+
+        We know where we are at the start, and we know to append to the array. When we finish,
+        we start at the back of the array, and go to the first element that only has a start
+        value. We then add the end value, and continue.
+
+        (h(k(j(l|z))))
+
+
+        Find the group which 
+        
+
+
+
+        A group can be divided by another group, or an |
+
+        If it's another group, then we parse that group.
+
+        If it's an |, then we parse until we get a true. If we don't get a true, we quit.
+
+
+
+
+        I have to have some way to track the beginning of a given group within S.
+
+        Enter a paren. Mark the current location in S, and the current index in grouplist.
+
+        match contents as normal.
+
+        When you get to the end, keep the broken descent pattern...?
+
+        When you get to the end, you know where you currently are in S IFF you are doing
+        a straight-forward single pass. In that case, add s[start: end] to the correct
+        grouplist index.
+
+        If the pattern is broken?
+
+        Lets say we have the current pattern of iterative processing of successive levels
+        of parenthesis.
+
+        We evaluate each level at once.
+
+        In order to proceed, we need at least one of every option to be true. That means 
+        that for every subgroup, there will be at least one match. *that* means that for
+        every subgroup, there will be a list entry. So you iterate from... I was going to
+        say the current index to the end of the list, but that doesn't scale. So instead
+        I'll say that you add the contents of grouplist[i+1] to grouplist[i], providing that
+        there is an i+1. 
+
+        You then start matching from the end of the pattern of groups - which you have - and
+        s[si+len(grouplist[cur])]
+
+
+        Alternatively, do the inverse of your current algorithm, and march backwards to find 
+        the relevant open paren?
+
+
+
+
+        Lets think of some alternative algorithms, now that I have access to so much more
+        data,
+
+        Keep going straight down in recursive descent. Before any return false, check if
+        the next character is |. If it is, we have another chance.
+
+        No, that will involve constantly breaking the straight recursive descent. I don't
+        think it will be crucial, but it will be annoying.
+
+        just using len(e) won't work because e may contain subgroups. I can adjust
+        for excluding parenthesis and so on for one level, but not more.
+
+        But can group documentation help this? Early on, I add a new element to the 
+        grouplist, and save it's index. I then do recursion.
+
+        Eventually, the recursion bottoms out; the end of the group has been explored. I then
+        search backwards for the last openning paren...
+
+
+
+
+        nononono.
+
+        Whenever I start parsing a group, I note the start index in S. When I finish parsing it,
+        I have the end index. I copy over s[start:end(+1?)] into the group list
+
+        What are you smoking? HOW DO YOU GET THE END INDEX? "I" don't have the end index.
+        Some function deeper down the stack does. 
+            - Make a global variable for si_furthest
+            -There are two possibilities: eithe the current group is terminating, in which
+            case len(e) can be added to si, or it is not the terminal group, in which case 
+            there are more groups ahead of it. In that case, just grab every group after the
+            current one, add them to the current group, and then add their lengths to si
+        
+        '''
         
         
         '''
@@ -196,18 +478,18 @@ def matchhere(s, si, p, pi):
 
 
         '''
-        elems = []
+        choices = []
         prev_devider = 0
 
         for i, c in enumerate(p):
             if c == "|":
-                elems.append(p[prev_devider+1:i])
+                choices.append(p[prev_devider+1:i])
                 prev_devider = i
 
-        elems.append(p[prev_devider+1:-1])
+        choices.append(p[prev_devider+1:-1])
 
         #Asking for forgiveness, not permission
-        for elem in elems:
+        for elem in choices:
             try:
                 if elem == s[0:len(elem)]:
                     return matchhere(s[len(elem)+1 : ], p[p.index(")")+1 : ])
@@ -230,7 +512,69 @@ def matchhere(s, si, p, pi):
     elif s[si] == p[pi]:
         return matchhere(s, si+1, p, pi+1)
     else:
+        return check_exit(s, si, p, pi)
+
+
+def get_choices(p, pi) -> list:
+    '''
+    pi should be the first character after the opening (
+    '''
+    choices = [pi]
+    paren_stack = []
+    end = find_group_end(p, pi) #choices must be in *this* group
+
+    while pi < end: 
+        if p[pi] == "|" and len(paren_stack) == 0:
+            choices.append(pi + 1)
+        elif p[pi] == "(":
+            paren_stack.append("(")
+        elif p[pi] == ")":
+            paren_stack.pop()
+
+        pi += 1
+
+    return choices
+
+
+
+def find_group_end(p, pi) -> int:
+    '''
+    pi should be the first character after the opening (
+    '''
+    paren_stack = []
+
+    while pi < len(p):
+        if p[pi] == ")" and len(paren_stack) == 0:
+            return pi
+        elif p[pi] == ")" and len(paren_stack) != 0:
+            paren_stack.pop()
+        elif p[pi] == "(":
+            paren_stack.append("(")
+        pi += 1
+
+
+def check_exit(s, si, p, pi) -> bool:
+    return False
+    
+    i = p[pi:].find("|")
+    j = p[pi:].find("(")
+    if i != -1 and (i < j or j == -1):
+        i += pi
+        global groups
+        return matchhere(s, si, p, i)
+    else:
         return False
+
+'''
+Alternative structure: check_exits() only checks if there is another option available, and gives
+it's index, but it doesn't go there. Subfunctions then return false until we reach a match_(, 
+which will re-try at the next index
+
+
+go backwards to find the last open paren on the same level NONONNOONONONONO It's not about
+the parenthesis, it's about the placement in S!
+
+'''
 
 
 def main():
@@ -247,8 +591,15 @@ def main():
     except:
         print("Logs from your program will appear here!")
 
-        s = "cat"
-        pattern = ("ca?t")
+        '''
+        s = "'cat and cat' is the same as 'cat and cat'"
+        pattern = ("((cat) and \2) is the same as \1")
+        '''
+        s = "abcd is abcd, not efg"
+        pattern = "([abcd]+) is \1, not [^xyz]+"
+        
+
+
 
 
         # Uncomment this block to pass the first stage
@@ -264,6 +615,25 @@ def main():
             exit(0)
         else:
             exit(1)
+
+        
+
+    '''
+    print("Logs from your program will appear here!")
+
+    s = "cat and cat is the same as cat and cat"
+    pattern = ("((cat) and \\2) is the same as \\1")'''
+
+    '''s = "cat"
+    pattern = ("(cat|dog)")'''
+
+
+    # Uncomment this block to pass the first stage
+    if match(s, pattern):
+        print(s)
+        exit(0)
+    else:
+        exit(1)
 
 if __name__ == "__main__":
     main()
