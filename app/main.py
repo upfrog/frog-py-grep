@@ -2,116 +2,132 @@
 
 import sys
 
-# import pyparsing - available if you need it!
-# import lark - available if you need it!
+'''
+This is a basic, not-very-performant regular expression engine.
 
-def match(s, p):
+It supports:
+- Literal matches ("x")
+- Matches with numeric and alphanumeric character classes ("\\d", "\\w")
+- Custom positive and negative character groups ("[]", "[^])
+- Start and end-of-line anchors  ("^", "$")
+- Alternation  ("(A|B)")
+- A wildcard (".")
+- Matching one or more times ("+")
+- Matching zero or one times  ("?")
+- Backreferences ("\n")
+
+It has not been exhastively tested; there are almost certainly some 
+un-handled edge cases.
+
+It is has now advanced to the beta phase. Some improvement I'd like to make:
+- File input (right now it just functions on one line of input)
+- More graceful rejection of ill-formed inputs
+- More rigorous testing
+- A more scaleable implementation of repetition markers such as "+" and "?"
+- A finite repeition marker
+- Refactor to avoid using a global list to store matched groups
+- Consider refactoring most (all?) of the token-level matching into subfunctions
+
+
+'''
+
+
+def match(s, p) -> bool:
     global groups
     
     if p[0] == "^":
-        
         groups = []
         return matchhere(s, 0, p, 1)
     for i, c in enumerate(s):
-         
         groups = []
         if (matchhere(s, i, p, 0)):
             return True
 
     return False
 
-'''
-How do I modify my capture groups?
-- Degenerate form: check the end+1th character. If it is a special match... Write special code to
-handle each
-- Slightly less degenerate form. Write the end+1th check, and use it to set a max and/or a min number
-of occurences for the capture group. Then pass those off to a loop, which basically contains your
-current code.
 
-Also, I should make it fail more gracefully.
-
-
-What modification (? or +) situations do I need to handle?
-- modification of a constant
-- modification of a group?
-- modification of a capture group
-
-
-'''
 def matchhere(s, si, p, pi):
     '''si is the current index in s, and pi is the current index in p
     '''
-
-    global groups #THIS SEEMS REALLY BAD
+    global groups #Global variable - probably best to factor out
+    
+    #These make some of the future conditionals clearer
     p_remainder = len(p) - (pi)
     s_remainder = len(s) - (si)
+    
+    #These are purely to simplify using the debugger.
     try:
         p_val = p[pi]
         s_val = s[si]
     except:
         pass
+
     if p_remainder == 0:
+        #If we have finished the pattern, then the match is succesfull
         return True
-    elif p_remainder > 1 and p[pi+1] == "+": #first check prevents out of bounds
+    elif p_remainder > 1 and p[pi + 1] == "+":
         #Match one or more time
         if s[si] == p[pi]:
-            
             matches = 1
-            while (matches + si) < s_remainder and s[si+matches] == p[pi]:
+            while (matches + si) < s_remainder and s[si + matches] == p[pi]:
                 matches += 1
-            return matchhere(s, si+matches, p, pi + 2)
+            return matchhere(s, si + matches, p, pi + 2)
         else:
-            return check_exit(s, si, p, pi)
+            return False
     elif p_remainder > 1 and p[pi + 1] == "?":
-        #Match zero or 1 times
+        #Match zero or one times
         if s_remainder == 0:
             return matchhere(s, si, p, pi + 2) #In case p still has more conditions
         elif s[si] == p[pi]:
                 return matchhere(s, si + 1, p, pi + 2)
         else:
-            return matchhere(s, si, p, pi+2)
+            return matchhere(s, si, p, pi + 2)
     elif p[pi] == "[":
-        group_end = p[pi:].find("]") + pi #I should have a way to throw an error if it isn't found.
+        #Match the beginning of a character group
+        group_end = p[pi : ].find("]") + pi #I should throw an error if it isn't found
         
         if len(p) > group_end + 1 and p[group_end + 1] == "+":
-            #match the group for 1 or more times
-            if p[pi+1] == "^":
+            #mMtch the group for 1 or more times
+            if p[pi + 1] == "^":
                 while si < len(s):
-                    if s[si] not in p[pi+2:group_end]:
+                    if s[si] not in p[pi + 2 : group_end]:
                         si += 1
-                        #return matchhere(s, si, p, pi+group_end+1)
                     else:
                         return False
                     return True
             else:
-                if s[si] not in p[pi+1:group_end]:
+                if s[si] not in p[pi + 1 : group_end]:
                     return False
-                while s[si] in p[pi+1:group_end]:
+                while s[si] in p[pi + 1 : group_end]:
                     si += 1
 
             return matchhere(s, si, p, group_end + 2)
+        elif len(p) > group_end + 1 and p[group_end + 1] == "?":
+            #Match the group one or zero times - whether it matches or not, we continue!
+            return matchhere(s, si, p, pi + group_end + 1)
         else:
             #Match the group once
             if p[pi+1] == "^":
-                if s[si] not in p[pi+2:group_end]:
-                    return matchhere(s, si, p, pi+group_end+1)
+                if s[si] not in p[pi + 2 : group_end]:
+                    return matchhere(s, si, p, pi + group_end + 1)
                 else:
                     return False
             else:
-                if s[si] not in p[pi+1:group_end]:
+                if s[si] not in p[pi + 1 : group_end]:
                     return False
                 else:
-                    return matchhere(s, si+1, p, group_end + 1)
+                    return matchhere(s, si + 1, p, group_end + 1)
     elif p[pi] == "\\":
-        k = p[pi+1]
-        if len(p) > pi + 2 and p[pi+2] == "+":
+        #Match one of the several tokens which start with a backslash
+        k = p[pi + 1]
+        if len(p) > pi + 2 and p[pi + 2] == "+":
             if k == "d":
                 #Match 1 or more digits
                 if s[si].isnumeric() is True:
                     si += 1
                     while s[si].isnumeric() is True:
                         si += 1
-                    return matchhere(s, si,p, pi+3)
+                    return matchhere(s, si, p, pi + 3)
                 else:
                     return False
             elif k == "w":
@@ -120,7 +136,7 @@ def matchhere(s, si, p, pi):
                     si += 1
                     while (s[si].isnumeric() or s[si].isalpha() or s[si] == "_"):
                         si += 1
-                    return matchhere(s, si, p, pi+3)
+                    return matchhere(s, si, p, pi + 3)
                 else:
                     return False
             elif int(k) <= len(groups):
@@ -129,48 +145,50 @@ def matchhere(s, si, p, pi):
                 begin = groups[k][0]
                 end = groups[k][1]
                 back_reference = s[begin : end]
+
                 if s[si: si+(end-begin)] == back_reference:
                     #it's true! We can move on
                     si += len(back_reference)
-                    while s[si: si + len(back_reference)] == back_reference:
+                    while s[si : si + len(back_reference)] == back_reference:
                         si+= len(back_reference)
-                    return matchhere(s, si + (end-begin), p, pi+2)
+                    return matchhere(s, si + (end-begin), p, pi + 2)
                 else:
                     return False
-                
-        if len(p) > pi + 2 and p[pi+2] == "?":
+        if len(p) > pi + 2 and p[pi + 2] == "?":
             pass
         else:
             if k == "d":
                 #Match a digit
                 if s[si].isnumeric() is True:
-                    return matchhere(s, si+1,p, pi+2)
+                    return matchhere(s, si + 1, p, pi + 2)
                 else:
-                    return check_exit(s, si, p, pi+1)
+                    return False
             elif k == "w":
                 #Match an alphanumeric character
                 if (s[si].isnumeric() or s[si].isalpha() or s[si] == "_"):
-                    return matchhere(s, si+1, p, pi+2)
+                    return matchhere(s, si + 1, p, pi + 2)
             elif int(k) <= len(groups):
                 #Match a backreference
                 k = int(k) - 1
                 begin = groups[k][0]
                 end = groups[k][1]
                 back_reference = s[begin : end]
+
                 if s[si: si+(end-begin)] == back_reference:
                     #it's true! We can move on
-                    return matchhere(s, si + (end-begin), p, pi+2)
+                    return matchhere(s, si + (end-begin), p, pi + 2)
             else:
-                return check_exit(s, si, p, pi + 1)
+                return False
     elif p[pi] == "$":
         #Anchor to the end of the string
         if s_remainder == 0:
             return True
         else:
-            return check_exit(s, si, p, pi + 1)
+            return False
     elif p[pi] == "(":
+        #Open a group, and record it's start
         groups.append([si])   
-        choices = get_choices(p, pi+1)
+        choices = get_choices(p, pi + 1)
 
         for elem in choices:
             if matchhere(s, si, p, elem):
@@ -178,24 +196,21 @@ def matchhere(s, si, p, pi):
 
         return False
     elif p[pi] == ")":
+        #Close a group, and record it's end.
         i = len(groups) - 1
-
         while i >= 0 and len(groups[i]) != 1:
             i -= 1
-
         groups[i].append(si) 
-        return matchhere(s, si, p, pi+1)
+        return matchhere(s, si, p, pi + 1)
     elif p[pi] == "|":
-        '''
-        It doesn't matter how many additional optional terms there are, and how many groups
-        deep they go. to be here, we must have matched the previous option, so we can
-        ignore the future options. Therefor, we want to go straight to the end of the group        
+        '''To be here, we must have matched at least one option, so we can ignore 
+        any future options.
         '''
         i = find_group_end(p, pi)
         return matchhere(s, si, p, i) #go to it, not past it; we want to document the group end
     elif s_remainder == 0:
         '''Running out of pattern characters before the input is over
-        is fine. Running out of input before the pattern is over is not
+        is fine. Running out of input before the pattern is over is not.
         '''
         return False
     elif p[pi] == ".":
@@ -203,15 +218,17 @@ def matchhere(s, si, p, pi):
         this is after the check for remaining characters, it is
         guaranteed to pass.
         '''
-        return matchhere(s, si+1, p, pi+1) 
+        return matchhere(s, si + 1, p, pi + 1) 
     elif s[si] == p[pi]:
-        return matchhere(s, si+1, p, pi+1)
+        return matchhere(s, si + 1, p, pi + 1)
     else:
-        return check_exit(s, si, p, pi)
+        return False
 
 
 def get_choices(p, pi) -> list:
-    '''
+    '''Finds all options (seperated by "|", if there is more than one) on a given
+    group level.
+
     pi should be the first character after the opening (
     '''
     choices = [pi]
@@ -231,10 +248,10 @@ def get_choices(p, pi) -> list:
     return choices
 
 
-
 def find_group_end(p, pi) -> int:
-    '''
-    pi should be the first character after the opening (
+    '''Finds the closing bracket of the current group level.
+
+    pi should be the first character after the opening
     '''
     paren_stack = []
 
@@ -248,11 +265,14 @@ def find_group_end(p, pi) -> int:
         pi += 1
 
 
-def check_exit(s, si, p, pi) -> bool:
-    return False
-
-
 def main():
+    '''This is here to make manual testing easier. When run from the command line
+    with 
+    
+    $ echo -n "<input>" | ./your_program.sh -E "<pattern>"
+
+    it works as normal. When run directly, it will run on the manually inputted s and pattern
+    '''
     try:
         pattern = sys.argv[2]
         s = sys.stdin.read()
@@ -260,34 +280,18 @@ def main():
         if sys.argv[1] != "-E":
             print("Expected first argument to be '-E'")
             exit(1)
-
-
     except:
-
-        s = "3 red squares and 3 red circles"
-        pattern = "(\\d+) (\\w+) squares and \\1 \\2 circles"
+        s = "YOUR STRING HERE"
+        pattern = "YOUR PATTERN HERE"
         
-        print("Logs from your program will appear here!")
-        if match(s, pattern):
-            print(s)
-            exit(0)
-        else:
-            exit(1)
-    else:
-        print("Logs from your program will appear here!")
-        if match(s, pattern):
-            print(s)
-            exit(0)
-        else:
-            exit(1)
-
-
+        
+    print("Results:")
     if match(s, pattern):
         print(s)
         exit(0)
     else:
         exit(1)
 
+
 if __name__ == "__main__":
     main()
-
