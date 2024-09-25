@@ -28,6 +28,8 @@ handle each
 of occurences for the capture group. Then pass those off to a loop, which basically contains your
 current code.
 
+Also, I should make it fail more gracefully.
+
 
 What modification (? or +) situations do I need to handle?
 - modification of a constant
@@ -132,7 +134,7 @@ def matchhere(s, si, p, pi):
                     si += len(back_reference)
                     while s[si: si + len(back_reference)] == back_reference:
                         si+= len(back_reference)
-                    return matchhere(s, si + (end-begin) + 1, p, pi+2)
+                    return matchhere(s, si + (end-begin), p, pi+2)
                 else:
                     return False
                 
@@ -157,7 +159,7 @@ def matchhere(s, si, p, pi):
                 back_reference = s[begin : end]
                 if s[si: si+(end-begin)] == back_reference:
                     #it's true! We can move on
-                    return matchhere(s, si + (end-begin) + 1, p, pi+2)
+                    return matchhere(s, si + (end-begin), p, pi+2)
             else:
                 return check_exit(s, si, p, pi + 1)
     elif p[pi] == "$":
@@ -181,7 +183,7 @@ def matchhere(s, si, p, pi):
         while i >= 0 and len(groups[i]) != 1:
             i -= 1
 
-        groups[i].append(si-1) 
+        groups[i].append(si) 
         return matchhere(s, si, p, pi+1)
     elif p[pi] == "|":
         '''
@@ -262,8 +264,8 @@ def main():
 
     except:
 
-        s = "once a dreaaaamer, always a dreaaamer"
-        pattern = "once a (drea+mer), alwaysz? a \\1"
+        s = "3 red squares and 3 red circles"
+        pattern = "(\\d+) (\\w+) squares and \\1 \\2 circles"
         
         print("Logs from your program will appear here!")
         if match(s, pattern):
