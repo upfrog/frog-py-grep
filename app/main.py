@@ -27,8 +27,6 @@ It is has now advanced to the beta phase. Some improvement I'd like to make:
 - A finite repeition marker
 - Refactor to avoid using a global list to store matched groups
 - Consider refactoring most (all?) of the token-level matching into subfunctions
-
-
 '''
 
 
