@@ -1,38 +1,25 @@
-[![progress-banner](https://backend.codecrafters.io/progress/grep/72e75ca7-a33c-4544-ae56-edd5b0d335ce)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+A basic implementation of grep in Python, originally built with guidance and test cases from Codecrafters.io
 
-This is a starting point for Python solutions to the
-["Build Your Own grep" Challenge](https://app.codecrafters.io/courses/grep/overview).
+It supports:
 
-[Regular expressions](https://en.wikipedia.org/wiki/Regular_expression)
-(Regexes, for short) are patterns used to match character combinations in
-strings. [`grep`](https://en.wikipedia.org/wiki/Grep) is a CLI tool for
-searching using Regexes.
+    Literal matches ("x")
+    Matches with numeric and alphanumeric character classes ("\d", "\w")
+    Custom positive and negative character groups ("[]", "[^])
+    Start and end-of-line anchors ("^", "$")
+    Alternation ("(A|B)")
+    A wildcard (".")
+    Matching one or more times ("+")
+    Matching zero or one times ("?")
+    Backreferences ("\n")
 
-In this challenge you'll build your own implementation of `grep`. Along the way
-we'll learn about Regex syntax, how parsers/lexers work, and how regular
-expressions are evaluated.
+It has not been exhastively tested; there are almost certainly some un-handled edge cases.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+It is has now advanced to the beta phase. Some improvement I'd like to make:
 
-# Passing the first stage
-
-The entry point for your `grep` implementation is in `app/main.py`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
-
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
-
-Time to move on to the next stage!
-
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `python (3.11)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.py`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+    File input (right now it just functions on one line of input)
+    More graceful rejection of ill-formed inputs
+    More rigorous testing
+    A more scaleable implementation of repetition markers such as "+" and "?"
+    A finite repeition marker
+    Refactor to avoid using a global list to store matched groups
+    Consider refactoring most (all?) of the token-level matching into subfunctions
